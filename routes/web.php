@@ -84,6 +84,10 @@ Route::middleware('auth')->group(function () {
         
         // Users Management
         Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');
+        Route::get('/users/create', [AdminController::class, 'usersCreate'])->name('users.create');
+        Route::post('/users', [AdminController::class, 'usersStore'])->name('users.store');
+        Route::get('/users/{user}/edit', [AdminController::class, 'usersEdit'])->name('users.edit');
+        Route::patch('/users/{user}', [AdminController::class, 'usersUpdate'])->name('users.update');
         Route::patch('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
         Route::patch('/users/{user}/update-role', [AdminController::class, 'updateUserRole'])->name('users.update-role');
         Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');

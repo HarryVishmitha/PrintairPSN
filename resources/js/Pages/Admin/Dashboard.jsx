@@ -6,7 +6,7 @@ import { Button } from '@/Components/ui/Button';
 import { Link } from '@inertiajs/react';
 import { pageBreadcrumbs } from '@/lib/breadcrumbs';
 
-export default function AdminDashboard({ stats, recentActivity }) {
+export default function AdminDashboard({ stats, recentActivity, recentOrders }) {
     // Use helper function for consistent breadcrumbs
     const breadcrumbs = pageBreadcrumbs.adminDashboard();
 
@@ -37,40 +37,135 @@ export default function AdminDashboard({ stats, recentActivity }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatsCard
                     title="Total Users"
-                    value={stats.totalUsers || 0}
-                    change="+12%"
-                    trend="up"
+                    value={stats.users?.total || 0}
+                    change={`${stats.users?.new_this_month || 0} new`}
+                    trend="neutral"
                     icon="solar:user-bold-duotone"
                     color="blue"
                 />
                 <StatsCard
-                    title="Working Groups"
-                    value={stats.totalWorkingGroups || 0}
-                    change="+8%"
-                    trend="up"
-                    icon="solar:users-group-rounded-bold-duotone"
+                    title="Total Orders"
+                    value={stats.orders?.total || 0}
+                    change={`${stats.orders?.growth > 0 ? '+' : ''}${stats.orders?.growth || 0}%`}
+                    trend={stats.orders?.growth > 0 ? 'up' : stats.orders?.growth < 0 ? 'down' : 'neutral'}
+                    icon="solar:cart-large-2-bold-duotone"
                     color="green"
                 />
                 <StatsCard
-                    title="Active Memberships"
-                    value={stats.activeMemberships || 0}
-                    change="+23%"
-                    trend="up"
-                    icon="solar:verified-check-bold-duotone"
+                    title="Pending Invoices"
+                    value={stats.invoices?.pending || 0}
+                    change={`$${(stats.invoices?.pending_amount || 0).toLocaleString()}`}
+                    trend="neutral"
+                    icon="solar:bill-list-bold-duotone"
                     color="yellow"
                 />
                 <StatsCard
-                    title="Recent Activities"
-                    value={stats.recentActivities || 0}
-                    change="-5%"
-                    trend="down"
-                    icon="solar:bolt-circle-bold-duotone"
-                    color="red"
+                    title="Total Assets"
+                    value={stats.assets?.total || 0}
+                    change={`$${(stats.assets?.value || 0).toLocaleString()}`}
+                    trend="neutral"
+                    icon="solar:box-bold-duotone"
+                    color="purple"
                 />
             </div>
 
-            {/* Recent Activity */}
-            <Card>
+            {/* Secondary Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <StatsCard
+                    title="Working Groups"
+                    value={stats.workingGroups?.active || 0}
+                    change={`${stats.workingGroups?.total || 0} total`}
+                    trend="neutral"
+                    icon="solar:users-group-rounded-bold-duotone"
+                    color="blue"
+                />
+                <StatsCard
+                    title="Pending Quotes"
+                    value={stats.quotes?.pending || 0}
+                    change={`${stats.quotes?.this_month || 0} this month`}
+                    trend="neutral"
+                    icon="solar:document-text-bold-duotone"
+                    color="indigo"
+                />
+                <StatsCard
+                    title="Completed Orders"
+                    value={stats.orders?.completed || 0}
+                    change={`${stats.orders?.pending || 0} pending`}
+                    trend="neutral"
+                    icon="solar:verified-check-bold-duotone"
+                    color="green"
+                />
+                <StatsCard
+                    title="Invoice Revenue"
+                    value={`$${((stats.invoices?.paid_amount || 0) / 1000).toFixed(1)}k`}
+                    change={`${stats.invoices?.paid || 0} paid`}
+                    trend="up"
+                    icon="solar:dollar-bold-duotone"
+                    color="emerald"
+                />
+            </div>
+
+            {/* Recent Orders and Activity Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Recent Orders */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <Icon icon="solar:cart-large-2-bold-duotone" className="w-5 h-5 text-green-600" />
+                                Recent Orders
+                            </CardTitle>
+                            <Link href="/admin/orders">
+                                <Button variant="ghost" size="sm">
+                                    View all
+                                    <Icon icon="solar:alt-arrow-right-linear" className="w-4 h-4 ml-2" />
+                                </Button>
+                            </Link>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {recentOrders && recentOrders.length > 0 ? (
+                            <div className="space-y-3">
+                                {recentOrders.map((order) => (
+                                    <div key={order.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                Order #{order.id}
+                                            </p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {order.user} • {order.created_at}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                                order.status === 'completed' 
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                                    : order.status === 'pending'
+                                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
+                                            }`}>
+                                                {order.status}
+                                            </span>
+                                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                ${order.total.toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <Icon icon="solar:cart-large-2-linear" className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    No recent orders
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Recent Activity */}
+                <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2">
@@ -125,6 +220,7 @@ export default function AdminDashboard({ stats, recentActivity }) {
                     )}
                 </CardContent>
             </Card>
+            </div>
         </AdminLayout>
     );
 }

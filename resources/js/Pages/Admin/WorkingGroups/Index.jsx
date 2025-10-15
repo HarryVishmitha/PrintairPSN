@@ -1,5 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
+import toast from 'react-hot-toast';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Button } from '@/Components/ui/Button';
 import {
@@ -24,7 +25,13 @@ export default function WorkingGroupsIndex({ workingGroups }) {
     const confirmDelete = () => {
         router.delete(route('admin.working-groups.destroy', deleteDialog.id), {
             preserveScroll: true,
-            onSuccess: () => setDeleteDialog({ open: false, id: null, name: '' }),
+            onSuccess: () => {
+                setDeleteDialog({ open: false, id: null, name: '' });
+                toast.success('Working group deleted successfully');
+            },
+            onError: () => {
+                toast.error('Failed to delete working group');
+            },
         });
     };
 

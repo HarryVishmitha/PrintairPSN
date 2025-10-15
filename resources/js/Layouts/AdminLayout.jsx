@@ -15,9 +15,11 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/Components/ui/DropdownMenu";
+import useFlashMessages from "@/hooks/useFlashMessages";
 
 export default function AdminLayout({ header, title, children, breadcrumbs }) {
     const { url } = usePage();
+    useFlashMessages();
     const { auth } = usePage().props;
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const user = auth?.user;

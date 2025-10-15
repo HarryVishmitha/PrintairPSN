@@ -8,6 +8,10 @@ use App\Enums\WorkingGroupStatus;
 use App\Enums\WorkingGroupType;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Asset;
+use App\Models\Invoice;
+use App\Models\Order;
+use App\Models\Quote;
 use App\Models\User;
 use App\Models\WorkingGroup;
 use App\Models\WorkingGroupMembership;
@@ -25,11 +29,91 @@ class AdminController extends Controller
      */
     public function dashboard(): Response
     {
+        // Calculate date ranges
+        $today = now();
+        $thirtyDaysAgo = now()->subDays(30);
+        $sixtyDaysAgo = now()->subDays(60);
+
+        // User stats
+        $totalUsers = User::count();
+        $activeUsers = User::where('is_active', true)->count();
+        $newUsersThisMonth = User::where('created_at', '>=', $thirtyDaysAgo)->count();
+
+        // Working Group stats
+        $totalWorkingGroups = WorkingGroup::count();
+        $activeWorkingGroups = WorkingGroup::where('status', WorkingGroupStatus::ACTIVE)->count();
+        $activeMemberships = WorkingGroupMembership::where('status', MembershipStatus::ACTIVE)->count();
+
+        // Orders stats
+        $totalOrders = Order::count();
+        $pendingOrders = Order::where('status', 'pending')->count();
+        $completedOrders = Order::where('status', 'completed')->count();
+        $ordersThisMonth = Order::where('created_at', '>=', $thirtyDaysAgo)->count();
+        $ordersLastMonth = Order::whereBetween('created_at', [$sixtyDaysAgo, $thirtyDaysAgo])->count();
+        $ordersGrowth = $ordersLastMonth > 0 
+            ? round((($ordersThisMonth - $ordersLastMonth) / $ordersLastMonth) * 100, 1)
+            : 0;
+
+        // Quotes stats
+        $totalQuotes = Quote::count();
+        $pendingQuotes = Quote::where('status', 'pending')->count();
+        $approvedQuotes = Quote::where('status', 'approved')->count();
+        $quotesThisMonth = Quote::where('created_at', '>=', $thirtyDaysAgo)->count();
+
+        // Assets stats
+        $totalAssets = Asset::count();
+        $assetsThisMonth = Asset::where('created_at', '>=', $thirtyDaysAgo)->count();
+
+        // Invoices stats
+        $totalInvoices = Invoice::count();
+        $paidInvoices = Invoice::where('status', 'paid')->count();
+        $pendingInvoices = Invoice::where('status', 'pending')->count();
+        $overdueInvoices = Invoice::where('status', 'overdue')->count();
+        $invoicesTotal = Invoice::sum('total');
+        $invoicesPaid = Invoice::where('status', 'paid')->sum('total');
+        $invoicesPending = Invoice::where('status', 'pending')->sum('total');
+
+        // Activity logs
+        $recentActivities = ActivityLog::count();
+
         $stats = [
-            'totalUsers' => User::count(),
-            'totalWorkingGroups' => WorkingGroup::count(),
-            'activeMemberships' => WorkingGroupMembership::where('status', MembershipStatus::ACTIVE)->count(),
-            'recentActivities' => ActivityLog::count(),
+            'users' => [
+                'total' => $totalUsers,
+                'active' => $activeUsers,
+                'new_this_month' => $newUsersThisMonth,
+            ],
+            'workingGroups' => [
+                'total' => $totalWorkingGroups,
+                'active' => $activeWorkingGroups,
+                'memberships' => $activeMemberships,
+            ],
+            'orders' => [
+                'total' => $totalOrders,
+                'pending' => $pendingOrders,
+                'completed' => $completedOrders,
+                'this_month' => $ordersThisMonth,
+                'growth' => $ordersGrowth,
+            ],
+            'quotes' => [
+                'total' => $totalQuotes,
+                'pending' => $pendingQuotes,
+                'approved' => $approvedQuotes,
+                'this_month' => $quotesThisMonth,
+            ],
+            'assets' => [
+                'total' => $totalAssets,
+                'this_month' => $assetsThisMonth,
+            ],
+            'invoices' => [
+                'total' => $totalInvoices,
+                'paid' => $paidInvoices,
+                'pending' => $pendingInvoices,
+                'overdue' => $overdueInvoices,
+                'total_amount' => $invoicesTotal,
+                'paid_amount' => $invoicesPaid,
+                'pending_amount' => $invoicesPending,
+            ],
+            'activities' => $recentActivities,
         ];
 
         $recentActivity = ActivityLog::with('causer')
@@ -47,9 +131,25 @@ class AdminController extends Controller
                 ];
             });
 
+        // Recent orders
+        $recentOrders = Order::with('user')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'user' => $order->user?->name ?? 'Unknown',
+                    'status' => $order->status,
+                    'total' => $order->total,
+                    'created_at' => $order->created_at->format('M d, Y'),
+                ];
+            });
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'recentActivity' => $recentActivity,
+            'recentOrders' => $recentOrders,
         ]);
     }
 
@@ -337,6 +437,168 @@ class AdminController extends Controller
             'workingGroups' => $workingGroups,
             'filters' => $request->only(['search', 'role', 'working_group', 'status']),
         ]);
+    }
+
+    /**
+     * Show the form for creating a new user.
+     */
+    public function usersCreate(): Response
+    {
+        $roles = \Spatie\Permission\Models\Role::select('id', 'name')->get()->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+            ];
+        });
+
+        $workingGroups = WorkingGroup::select('id', 'name')
+            ->where('status', WorkingGroupStatus::ACTIVE)
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Admin/Users/Create', [
+            'roles' => $roles,
+            'workingGroups' => $workingGroups,
+        ]);
+    }
+
+    /**
+     * Store a newly created user.
+     */
+    public function usersStore(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'role' => 'required|string|exists:roles,name',
+            'working_groups' => 'nullable|array',
+            'working_groups.*' => 'exists:working_groups,id',
+            'is_active' => 'boolean',
+        ]);
+
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => bcrypt($request->password),
+                'is_active' => $request->is_active ?? true,
+                'email_verified_at' => now(),
+            ]);
+
+            // Assign role with working group context (use first working group or default)
+            $workingGroupId = $request->working_groups[0] ?? WorkingGroup::first()?->id;
+            if ($workingGroupId) {
+                $user->assignRole($request->role, WorkingGroup::find($workingGroupId));
+            }
+
+            // Add user to selected working groups
+            if ($request->working_groups) {
+                foreach ($request->working_groups as $groupId) {
+                    WorkingGroupMembership::create([
+                        'user_id' => $user->id,
+                        'working_group_id' => $groupId,
+                        'role' => WorkingGroupRole::MEMBER,
+                        'status' => MembershipStatus::ACTIVE,
+                    ]);
+                }
+            }
+
+            return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Failed to create user. ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show the form for editing a user.
+     */
+    public function usersEdit(User $user): Response
+    {
+        $roles = \Spatie\Permission\Models\Role::select('id', 'name')->get()->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+            ];
+        });
+
+        $workingGroups = WorkingGroup::select('id', 'name')
+            ->where('status', WorkingGroupStatus::ACTIVE)
+            ->orderBy('name')
+            ->get();
+
+        $userWorkingGroups = $user->memberships()
+            ->where('status', MembershipStatus::ACTIVE)
+            ->pluck('working_group_id')
+            ->toArray();
+
+        return Inertia::render('Admin/Users/Edit', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_active' => $user->is_active,
+                'role' => $user->roles->first()?->name ?? 'member',
+                'working_groups' => $userWorkingGroups,
+            ],
+            'roles' => $roles,
+            'workingGroups' => $workingGroups,
+        ]);
+    }
+
+    /**
+     * Update a user.
+     */
+    public function usersUpdate(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'nullable|string|min:8|confirmed',
+            'role' => 'required|string|exists:roles,name',
+            'working_groups' => 'nullable|array',
+            'working_groups.*' => 'exists:working_groups,id',
+            'is_active' => 'boolean',
+        ]);
+
+        try {
+            $user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'is_active' => $request->is_active ?? $user->is_active,
+            ]);
+
+            // Update password if provided
+            if ($request->filled('password')) {
+                $user->update(['password' => bcrypt($request->password)]);
+            }
+
+            // Update role
+            $workingGroupId = $request->working_groups[0] ?? WorkingGroup::first()?->id;
+            if ($workingGroupId) {
+                $user->syncRoles([$request->role], WorkingGroup::find($workingGroupId));
+            }
+
+            // Update working groups memberships
+            if ($request->has('working_groups')) {
+                // Remove old memberships
+                $user->memberships()->delete();
+
+                // Add new memberships
+                foreach ($request->working_groups as $groupId) {
+                    WorkingGroupMembership::create([
+                        'user_id' => $user->id,
+                        'working_group_id' => $groupId,
+                        'role' => WorkingGroupRole::MEMBER,
+                        'status' => MembershipStatus::ACTIVE,
+                    ]);
+                }
+            }
+
+            return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Failed to update user. ' . $e->getMessage());
+        }
     }
 
     /**

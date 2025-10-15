@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
+import toast from 'react-hot-toast';
 import AdminLayout from '@/Layouts/AdminLayout';
 
 export default function UsersIndex({ users, roles, workingGroups, filters: initialFilters }) {
@@ -34,6 +35,10 @@ export default function UsersIndex({ users, roles, workingGroups, filters: initi
             preserveScroll: true,
             onSuccess: () => {
                 setDeleteDialog({ open: false, id: null, name: '' });
+                toast.success('User deleted successfully');
+            },
+            onError: () => {
+                toast.error('Failed to delete user');
             },
         });
     };
@@ -45,6 +50,10 @@ export default function UsersIndex({ users, roles, workingGroups, filters: initi
             preserveScroll: true,
             onSuccess: () => {
                 setEditRoleDialog({ open: false, user: null, currentRole: '' });
+                toast.success('User role updated successfully');
+            },
+            onError: () => {
+                toast.error('Failed to update user role');
             },
         });
     };
@@ -52,6 +61,12 @@ export default function UsersIndex({ users, roles, workingGroups, filters: initi
     const toggleUserStatus = (userId) => {
         router.patch(route('admin.users.toggle-status', userId), {}, {
             preserveScroll: true,
+            onSuccess: () => {
+                toast.success('User status updated');
+            },
+            onError: () => {
+                toast.error('Failed to update status');
+            },
         });
     };
 
@@ -92,14 +107,13 @@ export default function UsersIndex({ users, roles, workingGroups, filters: initi
                             Manage all users, roles, and permissions
                         </p>
                     </div>
-                    {/* Temporarily disabled until Create page is built */}
-                    {/* <Link
+                    <Link
                         href={route('admin.users.create')}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                     >
                         <Icon icon="solar:user-plus-bold-duotone" className="w-5 h-5" />
-                        Invite User
-                    </Link> */}
+                        Create User
+                    </Link>
                 </div>
             }
         >
@@ -253,15 +267,14 @@ export default function UsersIndex({ users, roles, workingGroups, filters: initi
                                                 <Icon icon="solar:shield-user-bold-duotone" className="w-4 h-4" />
                                                 Role
                                             </button>
-                                            {/* Temporarily disabled until Edit page is built */}
-                                            {/* <Link
+                                            <Link
                                                 href={route('admin.users.edit', user.id)}
                                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                                                 title="Edit"
                                             >
                                                 <Icon icon="solar:pen-bold-duotone" className="w-4 h-4" />
                                                 Edit
-                                            </Link> */}
+                                            </Link>
                                             <button
                                                 onClick={() => handleDelete(user.id, user.name)}
                                                 className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"

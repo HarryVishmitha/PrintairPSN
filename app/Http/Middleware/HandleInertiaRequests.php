@@ -59,6 +59,12 @@ class HandleInertiaRequests extends Middleware
                 'status' => $currentWorkingGroup->status->value,
             ] : null,
             'availableWorkingGroups' => $availableWorkingGroups,
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+                'info' => $request->session()->get('info'),
+                'warning' => $request->session()->get('warning'),
+            ],
         ];
     }
 }

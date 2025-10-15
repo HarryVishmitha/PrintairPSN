@@ -31,9 +31,9 @@ class SecureHeaders
 
         // In development, allow Vite dev server
         if (app()->environment('local', 'development')) {
-            // Vite typically runs on port 5173, but allow common dev ports
-            $cspParts[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173 http://127.0.0.1:5173";
-            $cspParts[] = "connect-src 'self' ws://localhost:5173 ws://127.0.0.1:5173 http://localhost:5173 http://127.0.0.1:5173 https://api.iconify.design https://api.simplesvg.com https://api.unisvg.com";
+            // Vite typically runs on port 5173, but allow common dev ports (5173-5174)
+            $cspParts[] = "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173 http://127.0.0.1:5173 http://localhost:5174 http://127.0.0.1:5174";
+            $cspParts[] = "connect-src 'self' ws://localhost:5173 ws://127.0.0.1:5173 ws://localhost:5174 ws://127.0.0.1:5174 http://localhost:5173 http://127.0.0.1:5173 http://localhost:5174 http://127.0.0.1:5174 https://api.iconify.design https://api.simplesvg.com https://api.unisvg.com";
         } else {
             $cspParts[] = "script-src 'self' 'unsafe-inline'";
             $cspParts[] = "connect-src 'self' https://api.iconify.design https://api.simplesvg.com https://api.unisvg.com";
