@@ -663,11 +663,67 @@ class AdminController extends Controller
     /**
      * Display activity log.
      */
-    public function activityLog(): Response
+    public function activityLog(Request $request): Response
     {
-        $activities = ActivityLog::with(['causer', 'subject'])
-            ->latest()
-            ->paginate(20);
+        $query = ActivityLog::with(['causer', 'subject']);
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                    ->orWhere('log_name', 'like', "%{$search}%");
+            });
+        }
+
+        // Causer (user) filter
+        if ($request->filled('causer')) {
+            $query->where('causer_id', $request->causer);
+        }
+
+        // Subject type filter
+        if ($request->filled('subject_type')) {
+            $subjectType = $request->subject_type;
+            $query->where('subject_type', 'like', "%{$subjectType}%");
+        }
+
+        // Log name filter
+        if ($request->filled('log_name')) {
+            $query->where('log_name', $request->log_name);
+        }
+
+        // Date range filter
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $activities = $query->latest()->paginate(20)->withQueryString();
+
+        // Get all users for filter dropdown
+        $users = User::select('id', 'name')->orderBy('name')->get();
+
+        // Get unique log names for filter
+        $logNames = ActivityLog::select('log_name')
+            ->distinct()
+            ->whereNotNull('log_name')
+            ->orderBy('log_name')
+            ->pluck('log_name');
+
+        // Get unique subject types for filter
+        $subjectTypes = ActivityLog::select('subject_type')
+            ->distinct()
+            ->whereNotNull('subject_type')
+            ->get()
+            ->map(function ($activity) {
+                return class_basename($activity->subject_type);
+            })
+            ->unique()
+            ->sort()
+            ->values();
 
         return Inertia::render('Admin/ActivityLog', [
             'activities' => $activities->through(function ($activity) {
@@ -677,15 +733,21 @@ class AdminController extends Controller
                     'description' => $activity->description,
                     'subject_type' => $activity->subject_type ? class_basename($activity->subject_type) : null,
                     'subject_id' => $activity->subject_id,
+                    'event' => $activity->event ?? null,
                     'causer' => $activity->causer ? [
                         'id' => $activity->causer->id,
                         'name' => $activity->causer->name,
+                        'email' => $activity->causer->email,
                     ] : null,
                     'properties' => $activity->properties,
                     'created_at' => $activity->created_at->format('Y-m-d H:i:s'),
                     'created_at_human' => $activity->created_at->diffForHumans(),
                 ];
             }),
+            'users' => $users,
+            'logNames' => $logNames,
+            'subjectTypes' => $subjectTypes,
+            'filters' => $request->only(['search', 'causer', 'subject_type', 'log_name', 'date_from', 'date_to']),
         ]);
     }
 }

@@ -12,6 +12,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -20,6 +22,7 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory;
     use HasRoles;
     use Notifiable;
+    use LogsActivity;
 
     /**
      * The attributes that are mass assignable.
@@ -78,5 +81,17 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isSuperAdmin(): bool
     {
         return $this->hasRole(WorkingGroupRole::SUPER_ADMIN->value);
+    }
+
+    /**
+     * Get the activity log options for this model
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'is_active'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => "User {$eventName}");
     }
 }
