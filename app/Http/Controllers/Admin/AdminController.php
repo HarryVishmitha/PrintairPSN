@@ -270,17 +270,132 @@ class AdminController extends Controller
     /**
      * Display users list.
      */
-    public function usersIndex(): Response
+    public function usersIndex(Request $request): Response
     {
-        $users = User::with(['memberships' => function ($query) {
+        $query = User::with(['roles', 'memberships' => function ($query) {
             $query->with('workingGroup')->where('status', MembershipStatus::ACTIVE);
-        }])
-            ->latest()
-            ->paginate(15);
+        }]);
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Role filter
+        if ($request->filled('role')) {
+            $query->whereHas('roles', function ($q) use ($request) {
+                $q->where('name', $request->role);
+            });
+        }
+
+        // Working Group filter
+        if ($request->filled('working_group')) {
+            $query->whereHas('memberships', function ($q) use ($request) {
+                $q->where('working_group_id', $request->working_group)
+                    ->where('status', MembershipStatus::ACTIVE);
+            });
+        }
+
+        // Status filter
+        if ($request->filled('status')) {
+            $query->where('is_active', $request->status === 'active');
+        }
+
+        $users = $query->latest()->paginate(15)->withQueryString()->through(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_active' => $user->is_active,
+                'primary_role' => $user->roles->first()?->name ?? 'member',
+                'working_groups_count' => $user->memberships->count(),
+                'created_at' => $user->created_at->format('M d, Y'),
+            ];
+        });
+
+        // Get all roles for the filter dropdown
+        $roles = \Spatie\Permission\Models\Role::select('id', 'name')->get()->map(function ($role) {
+            return [
+                'id' => $role->id,
+                'name' => $role->name,
+            ];
+        });
+
+        // Get all working groups for the filter dropdown
+        $workingGroups = WorkingGroup::select('id', 'name')
+            ->where('status', WorkingGroupStatus::ACTIVE)
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
+            'roles' => $roles,
+            'workingGroups' => $workingGroups,
+            'filters' => $request->only(['search', 'role', 'working_group', 'status']),
         ]);
+    }
+
+    /**
+     * Toggle user active status.
+     */
+    public function toggleUserStatus(Request $request, User $user): RedirectResponse
+    {
+        try {
+            $user->is_active = !$user->is_active;
+            $user->save();
+
+            return back()->with('success', $user->is_active 
+                ? 'User activated successfully.' 
+                : 'User deactivated successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update user status.');
+        }
+    }
+
+    /**
+     * Update user role.
+     */
+    public function updateUserRole(Request $request, User $user): RedirectResponse
+    {
+        $request->validate([
+            'role' => 'required|string|exists:roles,name',
+        ]);
+
+        try {
+            // Remove all current roles and assign the new one
+            $user->syncRoles([$request->role]);
+
+            return back()->with('success', 'User role updated successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update user role.');
+        }
+    }
+
+    /**
+     * Delete user.
+     */
+    public function destroyUser(User $user): RedirectResponse
+    {
+        try {
+            // Prevent deletion of own account
+            if ($user->id === auth()->id()) {
+                return back()->with('error', 'You cannot delete your own account.');
+            }
+
+            // Delete related memberships first
+            $user->memberships()->delete();
+
+            // Delete the user
+            $user->delete();
+
+            return back()->with('success', 'User deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete user.');
+        }
     }
 
     /**
