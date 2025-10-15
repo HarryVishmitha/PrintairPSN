@@ -122,6 +122,18 @@ class WorkingGroup extends Model
         return $this->hasManyThrough(User::class, WorkingGroupMembership::class);
     }
 
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'category_working_group')
+            ->withPivot(['visibility_override', 'label_override', 'sort_order_override'])
+            ->withTimestamps();
+    }
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', WorkingGroupStatus::ACTIVE);

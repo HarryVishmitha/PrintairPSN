@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
+use App\Observers\CategoryObserver;
 use App\Support\WorkingGroupContext;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
@@ -25,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        // Register model observers
+        Category::observe(CategoryObserver::class);
 
         Activity::saving(function (Activity $activity): void {
             if (! app()->runningInConsole()) {
