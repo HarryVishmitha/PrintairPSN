@@ -33,7 +33,48 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Get the authenticated user
+        $user = $request->user();
+
+        // Determine redirect URL based on user's highest role
+        $redirectUrl = $this->getRedirectUrlByRole($user);
+
+        return redirect()->intended($redirectUrl);
+    }
+
+    /**
+     * Get the redirect URL based on user's role
+     */
+    private function getRedirectUrlByRole($user): string
+    {
+        // Check roles in priority order (highest to lowest)
+        if ($user->hasRole(\App\Enums\WorkingGroupRole::SUPER_ADMIN->value)) {
+            return route('admin.dashboard', absolute: false);
+        }
+
+        if ($user->hasRole(\App\Enums\WorkingGroupRole::ADMIN->value)) {
+            return route('admin.dashboard', absolute: false);
+        }
+
+        if ($user->hasRole(\App\Enums\WorkingGroupRole::MANAGER->value)) {
+            return route('manager.dashboard', absolute: false);
+        }
+
+        if ($user->hasRole(\App\Enums\WorkingGroupRole::DESIGNER->value)) {
+            return route('designer.dashboard', absolute: false);
+        }
+
+        if ($user->hasRole(\App\Enums\WorkingGroupRole::MARKETING->value)) {
+            return route('marketing.dashboard', absolute: false);
+        }
+
+        // Default to member dashboard or general dashboard
+        if ($user->hasRole(\App\Enums\WorkingGroupRole::MEMBER->value)) {
+            return route('member.dashboard', absolute: false);
+        }
+
+        // Fallback to default dashboard
+        return route('dashboard', absolute: false);
     }
 
     /**

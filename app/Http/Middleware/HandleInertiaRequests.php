@@ -29,11 +29,36 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $currentWorkingGroup = $request->attributes->get('workingGroup');
+
+        // Get available working groups for the user
+        $availableWorkingGroups = $user ? $user->memberships()
+            ->with('workingGroup')
+            ->where('status', \App\Enums\MembershipStatus::ACTIVE)
+            ->get()
+            ->map(function ($membership) use ($currentWorkingGroup) {
+                return [
+                    'id' => $membership->workingGroup->id,
+                    'name' => $membership->workingGroup->name,
+                    'type' => $membership->workingGroup->type->value,
+                    'role' => $membership->role->value,
+                    'is_default' => $membership->is_default,
+                ];
+            }) : [];
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
+            'currentWorkingGroup' => $currentWorkingGroup ? [
+                'id' => $currentWorkingGroup->id,
+                'name' => $currentWorkingGroup->name,
+                'type' => $currentWorkingGroup->type->value,
+                'status' => $currentWorkingGroup->status->value,
+            ] : null,
+            'availableWorkingGroups' => $availableWorkingGroups,
         ];
     }
 }

@@ -17,25 +17,25 @@ return [
      * If no log name is passed to the activity() helper
      * we use this default log name.
      */
-    'default_log_name' => 'default',
+    'default_log_name' => 'wg-audit',
 
     /*
      * You can specify an auth driver here that gets user models.
      * If this is null we'll use the current Laravel auth driver.
      */
-    'default_auth_driver' => null,
+    'default_auth_driver' => 'web',
 
     /*
      * If set to true, the subject returns soft deleted models.
      */
-    'subject_returns_soft_deleted_models' => false,
+    'subject_returns_soft_deleted_models' => true,
 
     /*
      * This model will be used to log activity.
      * It should implement the Spatie\Activitylog\Contracts\Activity interface
      * and extend Illuminate\Database\Eloquent\Model.
      */
-    'activity_model' => \Spatie\Activitylog\Models\Activity::class,
+    'activity_model' => App\Models\ActivityLog::class,
 
     /*
      * This is the name of the table that will be created by the migration and
