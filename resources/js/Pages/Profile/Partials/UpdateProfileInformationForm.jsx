@@ -14,7 +14,9 @@ export default function UpdateProfileInformation({
 
     const { data, setData, patch, errors, processing, recentlySuccessful } =
         useForm({
-            name: user.name,
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            phone_number: user.phone_number || '',
             email: user.email,
         });
 
@@ -27,30 +29,72 @@ export default function UpdateProfileInformation({
     return (
         <section className={className}>
             <header>
-                <h2 className="text-lg font-medium text-gray-900">
+                <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                     Profile Information
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     Update your account's profile information and email address.
+                    {!user.phone_number && (
+                        <span className="block mt-2 text-orange-600 dark:text-orange-400 font-semibold">
+                            ⚠️ Please add your phone number to complete your profile.
+                        </span>
+                    )}
                 </p>
             </header>
 
             <form onSubmit={submit} className="mt-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel htmlFor="first_name" value="First Name" />
+
+                        <TextInput
+                            id="first_name"
+                            className="mt-1 block w-full"
+                            value={data.first_name}
+                            onChange={(e) => setData('first_name', e.target.value)}
+                            required
+                            isFocused
+                            autoComplete="given-name"
+                        />
+
+                        <InputError className="mt-2" message={errors.first_name} />
+                    </div>
+
+                    <div>
+                        <InputLabel htmlFor="last_name" value="Last Name" />
+
+                        <TextInput
+                            id="last_name"
+                            className="mt-1 block w-full"
+                            value={data.last_name}
+                            onChange={(e) => setData('last_name', e.target.value)}
+                            required
+                            autoComplete="family-name"
+                        />
+
+                        <InputError className="mt-2" message={errors.last_name} />
+                    </div>
+                </div>
+
                 <div>
-                    <InputLabel htmlFor="name" value="Name" />
+                    <InputLabel htmlFor="phone_number" value="Phone Number *" />
 
                     <TextInput
-                        id="name"
+                        id="phone_number"
+                        type="tel"
                         className="mt-1 block w-full"
-                        value={data.name}
-                        onChange={(e) => setData('name', e.target.value)}
+                        value={data.phone_number}
+                        onChange={(e) => setData('phone_number', e.target.value)}
                         required
-                        isFocused
-                        autoComplete="name"
+                        autoComplete="tel"
+                        placeholder="+1 (555) 123-4567"
                     />
 
-                    <InputError className="mt-2" message={errors.name} />
+                    <InputError className="mt-2" message={errors.phone_number} />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Phone number is required and must be at least 10 digits.
+                    </p>
                 </div>
 
                 <div>

@@ -31,9 +31,14 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
         'email',
+        'phone_number',
         'password',
         'is_active',
+        'last_login_at',
+        'last_login_ip',
     ];
 
     /**
@@ -55,10 +60,19 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
             'default_working_group_id' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+    
+    /**
+     * Check if user has completed their profile (phone number required)
+     */
+    public function hasCompletedProfile(): bool
+    {
+        return !empty($this->phone_number);
     }
 
     public function memberships(): HasMany
@@ -89,7 +103,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'is_active'])
+            ->logOnly(['name', 'first_name', 'last_name', 'email', 'phone_number', 'is_active'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn(string $eventName) => "User {$eventName}");

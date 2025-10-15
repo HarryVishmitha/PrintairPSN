@@ -5,6 +5,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import ThemeWrapper from '@/Components/ThemeWrapper';
+import { CartProvider } from '@/context/CartContext';
 import { Toaster } from 'react-hot-toast';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -21,31 +22,33 @@ createInertiaApp({
 
         root.render(
             <ThemeWrapper>
-                <App {...props} />
-                <Toaster 
-                    position="top-right"
-                    toastOptions={{
-                        duration: 4000,
-                        style: {
-                            background: '#363636',
-                            color: '#fff',
-                        },
-                        success: {
-                            duration: 3000,
-                            iconTheme: {
-                                primary: '#10B981',
-                                secondary: '#fff',
-                            },
-                        },
-                        error: {
+                <CartProvider>
+                    <App {...props} />
+                    <Toaster 
+                        position="top-right"
+                        toastOptions={{
                             duration: 4000,
-                            iconTheme: {
-                                primary: '#EF4444',
-                                secondary: '#fff',
+                            style: {
+                                background: '#363636',
+                                color: '#fff',
                             },
-                        },
-                    }}
-                />
+                            success: {
+                                duration: 3000,
+                                iconTheme: {
+                                    primary: '#10B981',
+                                    secondary: '#fff',
+                                },
+                            },
+                            error: {
+                                duration: 4000,
+                                iconTheme: {
+                                    primary: '#EF4444',
+                                    secondary: '#fff',
+                                },
+                            },
+                        }}
+                    />
+                </CartProvider>
             </ThemeWrapper>
         );
     },

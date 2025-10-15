@@ -22,7 +22,23 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    $user = auth()->user();
+    
+    // Redirect to appropriate dashboard based on user's role
+    if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+        return redirect()->route('admin.dashboard');
+    } elseif ($user->hasRole('manager')) {
+        return redirect()->route('manager.dashboard');
+    } elseif ($user->hasRole('designer')) {
+        return redirect()->route('designer.dashboard');
+    } elseif ($user->hasRole('marketing')) {
+        return redirect()->route('marketing.dashboard');
+    } elseif ($user->hasRole('member')) {
+        return redirect()->route('member.dashboard');
+    }
+    
+    // Fallback to member dashboard if no specific role is found
+    return redirect()->route('member.dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/shadcn-example', function () {

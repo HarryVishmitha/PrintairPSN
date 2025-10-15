@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\SetCurrentWorkingGroup::class,
             \App\Http\Middleware\SecureHeaders::class,
+            \App\Http\Middleware\TrackLastLogin::class,
+            \App\Http\Middleware\EnsureProfileIsComplete::class,
         ]);
 
         // Register role middleware alias
